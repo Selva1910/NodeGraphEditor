@@ -23,7 +23,7 @@ namespace NodeGraph.Editor
 
         public GraphNodeEditor(BaseGraphNode node, SerializedObject codeGraphObject)
         {
-            this.AddToClassList("code-graph-node");
+            this.AddToClassList("node-graph-node");
 
             m_graphNode = node;
             m_Ports = new List<Port>();

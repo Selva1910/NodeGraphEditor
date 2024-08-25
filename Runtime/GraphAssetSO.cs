@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace NodeGraph
 {
-    [CreateAssetMenu(fileName = "NewCode", menuName = "CodeGraph/Asset")]
+    [CreateAssetMenu(fileName = "NewGraph", menuName = "NodeGraph/Asset")]
     public class GraphAssetSO : ScriptableObject
     {
         [SerializeReference]
