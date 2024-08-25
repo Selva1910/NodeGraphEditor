@@ -18,5 +18,9 @@
     "name": "SelvarajBalakrishnan",
     "email": "bselva1910@gmail.com",
     "url": "https://dsignvantage.wordpress.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Selva1910/NodeGraphEditor.git"
   }
 }
