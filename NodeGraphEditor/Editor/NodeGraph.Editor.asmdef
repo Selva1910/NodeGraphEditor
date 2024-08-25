@@ -1,0 +1,18 @@
+{
+    "name": "NodeGraph.Editor",
+    "rootNamespace": "NodeGraph.Editor",
+    "references": [
+        "GUID:7357e4a4501496049b7ab368c8c6fb09"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,22 @@
+{
+  "name": "com.cjhawk.graphnodeeditor",
+  "version": "1.0.0",
+  "displayName": "GraphNodeEditor",
+  "description": "A Simple Node Graph created from Scratch.",
+  "unity": "2022.3",
+  "unityRelease": "21f1",
+  "documentationUrl": "",
+  "changelogUrl": "",
+  "licensesUrl": "",
+  "dependencies": {},
+  "keywords": [
+    "grapheditor",
+    "graphnodeeditor",
+    "visualgrapheditor"
+  ],
+  "author": {
+    "name": "SelvarajBalakrishnan",
+    "email": "bselva1910@gmail.com",
+    "url": "https://dsignvantage.wordpress.com"
+  }
+}
