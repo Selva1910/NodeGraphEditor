@@ -9,15 +9,20 @@ namespace NodeGraph
     public class MoveNode : BaseGraphNode
     {
         [ExposedProperty]
-        public Vector3 direction;
+        [DisplayName("Target Position")]
+        public Vector3 targetPosition;
 
         [ExposedProperty]
-        public bool isAnimated;
+        [DisplayName("Target")]
+        public string moveObject;
 
-        public override string OnProcess(GraphAssetSO currentGraph)
+
+        public override void UpdateNode()
         {
-            currentGraph.gameObject.transform.localPosition += direction;
-            return base.OnProcess(currentGraph);
+            base.UpdateNode();
+            GameObject TargetObject = SceneObjectManager.Instance.GetObjectByName(moveObject);
+            TargetObject.GetComponent<IMovableObject>().TargetPosition = targetPosition;
+            IsCompleted = TargetObject.GetComponent<IMovableObject>().IsMoved;
         }
 
     }

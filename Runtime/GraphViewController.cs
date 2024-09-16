@@ -16,8 +16,12 @@ namespace NodeGraph
             if (m_graphAsset != null)
             {
                 graphInstance = Instantiate(m_graphAsset);
-                ExecuteAsset(graphInstance);
             }
+        }
+
+        private void Start()
+        {
+            ExecuteAsset(graphInstance);
         }
 
         private void ExecuteAsset(GraphAssetSO codeGraphAsset)
@@ -54,13 +58,32 @@ namespace NodeGraph
 
             visitedNodes.Add(currentNode.guid);
 
-            string nextNodeId = currentNode.OnProcess(graphInstance);
+            currentNode.Stage = LifeStage.Activating;
+            currentNode.AwakeNode();
 
-            if (!string.IsNullOrEmpty(nextNodeId))
+            currentNode.StartNode();
+
+            StartCoroutine(UpdateCurrentNodeTillComplete(currentNode, () => {
+                currentNode.ExitNode();
+                string nextNodeId = currentNode.OnProcess(graphInstance);
+
+                if (!string.IsNullOrEmpty(nextNodeId))
+                {
+                    BaseGraphNode nextNode = graphInstance.GetNode(nextNodeId);
+                    ProcessAndMoveNextNode(nextNode, visitedNodes, depth + 1);
+                }
+            }));
+
+        }
+        IEnumerator UpdateCurrentNodeTillComplete(BaseGraphNode node, Action ActionCallBack)
+        {
+            while (!node.IsCompleted)
             {
-                BaseGraphNode nextNode = graphInstance.GetNode(nextNodeId);
-                ProcessAndMoveNextNode(nextNode, visitedNodes, depth + 1);
+                node.UpdateNode();
+                yield return new WaitForEndOfFrame();
             }
+
+            ActionCallBack();
         }
     }
 

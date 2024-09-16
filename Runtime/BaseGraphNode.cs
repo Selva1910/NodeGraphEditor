@@ -6,7 +6,7 @@ using UnityEngine;
 namespace NodeGraph
 {
     [Serializable]
-    public class BaseGraphNode
+    public abstract class BaseGraphNode : INodeLifecycle
     {
         [SerializeField] private string m_guid;
         [SerializeField] private Rect m_position;
@@ -15,6 +15,9 @@ namespace NodeGraph
 
         public string guid => m_guid;
         public Rect position => m_position;
+
+        public bool IsCompleted { get; set; }
+        public LifeStage Stage { get; set; }
 
         public BaseGraphNode()
         {
@@ -47,5 +50,35 @@ namespace NodeGraph
             }
             return string.Empty;
         }
+
+        public virtual void AwakeNode()
+        {
+            Debug.Log($"Awake on Node {this.GetType()}");
+        }
+
+        public virtual void StartNode()
+        {
+            Debug.Log($"Start on Node {this.GetType()}");
+        }
+
+        public virtual void UpdateNode()
+        {
+            Debug.Log($"Update on Node {this.GetType()}");
+
+        }
+
+        public virtual void ExitNode()
+        {
+            Debug.Log($"Exit on Node {this.GetType()}");
+
+        }
     }
+}
+public enum LifeStage
+{
+    Activating,
+    Active,
+    Paused,
+    DeActivating,
+    InActive
 }

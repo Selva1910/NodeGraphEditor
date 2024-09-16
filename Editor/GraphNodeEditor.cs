@@ -25,6 +25,8 @@ namespace NodeGraph.Editor
         {
             this.AddToClassList("node-graph-node");
 
+            extensionContainer.style.backgroundColor = new Color(.2f, .2f, .2f, .8f);
+
             m_graphNode = node;
             m_Ports = new List<Port>();
 
@@ -59,7 +61,16 @@ namespace NodeGraph.Editor
                 {
                     if (property.GetCustomAttribute<ExposedPropertyAttribute>() is ExposedPropertyAttribute exposedProperty)
                     {
-                        PropertyField field = DrawProperty(property.Name);
+                        string fieldName = string.Empty;
+                        if (property.GetCustomAttribute<DisplayNameAttribute>() is DisplayNameAttribute displayName)
+                        {
+                            fieldName = displayName.Name;
+                        }
+                        else
+                        {
+                            fieldName = property.Name;
+                        }
+                        PropertyField field = DrawProperty(property.Name, fieldName);
                         // Register value change callbacks here if needed
                     }
                 }
@@ -73,7 +84,7 @@ namespace NodeGraph.Editor
             RefreshPorts();
         }
 
-        private PropertyField DrawProperty(string propertyName)
+        private PropertyField DrawProperty(string propertyName, string displayName)
         {
             if (m_serializedProperty == null)
             {
@@ -98,6 +109,7 @@ namespace NodeGraph.Editor
             {
                 bindingPath = prop.propertyPath
             };
+            field.label = string.IsNullOrWhiteSpace(displayName) ? propertyName : displayName;
             extensionContainer.Add(field);
 
             return field;
@@ -134,7 +146,7 @@ namespace NodeGraph.Editor
 
         private void DrawFlowOutputs(BaseGraphNode courseNode)
         {
-            m_outputPort = InstantiatePort(Orientation.Horizontal, Direction.Output, Port.Capacity.Single, typeof(PortTypes.FlowPort));
+            m_outputPort = InstantiatePort(Orientation.Horizontal, Direction.Output, Port.Capacity.Multi, typeof(PortTypes.FlowPort));
             m_outputPort.portName = "Out";
             m_outputPort.tooltip = "The Flow Output";
             m_Ports.Add(m_outputPort);

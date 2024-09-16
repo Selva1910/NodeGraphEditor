@@ -14,4 +14,16 @@ namespace NodeGraph
         }
 
     }
+
+    public class DisplayNameAttribute : Attribute
+    {
+        string displayName;
+
+        public string Name => displayName;
+        public DisplayNameAttribute(string name)
+        {
+            displayName = name;
+        }
+
+    }
 }

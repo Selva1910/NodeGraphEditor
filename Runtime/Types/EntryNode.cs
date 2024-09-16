@@ -5,12 +5,19 @@ using UnityEngine;
 namespace NodeGraph
 {
     [NodeInfo("Start", "Process/Start", false, true)]
-    public class StartNode : BaseGraphNode
+    public class EntryNode : BaseGraphNode
     {
+
         public override string OnProcess(GraphAssetSO currentGraph)
         {
-            Debug.Log("Hello World, Start!");
             return base.OnProcess(currentGraph);
+        }
+
+        public override void StartNode()
+        {
+            base.StartNode();
+            Debug.Log("Hello World, Start!");
+            IsCompleted = true;
         }
 
     }

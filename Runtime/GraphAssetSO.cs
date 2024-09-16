@@ -36,7 +36,7 @@ namespace NodeGraph
                 return null;
             }
 
-            StartNode[] startNodes = Nodes.OfType<StartNode>().ToArray();
+            EntryNode[] startNodes = Nodes.OfType<EntryNode>().ToArray();
             if (startNodes.Length == 0)
             {
                 Debug.LogError("No Start Node!");
