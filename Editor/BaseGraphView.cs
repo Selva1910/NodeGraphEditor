@@ -180,8 +180,8 @@ namespace NodeGraph.Editor
             int outputIndex = outputNode.Ports.IndexOf(edge.output);
 
             GraphConnection connection = new GraphConnection(
-                new GraphConnectionPort(inputNode.Node.guid, inputIndex),
-                new GraphConnectionPort(outputNode.Node.guid, outputIndex)
+                new GraphConnectionPort(inputNode.Node.Guid, inputIndex),
+                new GraphConnectionPort(outputNode.Node.Guid, outputIndex)
             );
 
             // Add the new connection to the scriptable object
@@ -222,7 +222,7 @@ namespace NodeGraph.Editor
         private void RemoveNode(GraphNodeEditor editorNode)
         {
             m_codeGraph.Nodes.Remove(editorNode.Node);
-            m_nodeDitionary.Remove(editorNode.Node.guid);
+            m_nodeDitionary.Remove(editorNode.Node.Guid);
             m_graphNodes.Remove(editorNode);
             m_serializedObject.Update();
 
@@ -261,7 +261,7 @@ namespace NodeGraph.Editor
             GraphNodeEditor editorNode = new GraphNodeEditor(node, m_serializedObject);
             editorNode.SetPosition(node.position);
             m_graphNodes.Add(editorNode);
-            m_nodeDitionary.Add(node.guid, editorNode);
+            m_nodeDitionary.Add(node.Guid, editorNode);
 
             AddElement(editorNode);
         }

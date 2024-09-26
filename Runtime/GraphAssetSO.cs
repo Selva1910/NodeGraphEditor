@@ -52,7 +52,7 @@ namespace NodeGraph
             m_NodeDictionary = new Dictionary<string, BaseGraphNode>();
             foreach (BaseGraphNode node in Nodes)
             {
-                m_NodeDictionary.Add(node.guid, node);
+                m_NodeDictionary.Add(node.Guid, node);
             }
         }
 

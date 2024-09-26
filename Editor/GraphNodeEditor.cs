@@ -83,7 +83,11 @@ namespace NodeGraph.Editor
             RefreshExpandedState();
             RefreshPorts();
         }
-
+        public override void OnSelected()
+        {
+            Debug.Log(this.m_graphNode.typeName);
+            NodeInspector.ShowInspector(m_graphNode);
+        }
         private PropertyField DrawProperty(string propertyName, string displayName)
         {
             if (m_serializedProperty == null)
@@ -126,7 +130,7 @@ namespace NodeGraph.Editor
                 {
                     var element = nodes.GetArrayElementAtIndex(i);
                     var elementId = element.FindPropertyRelative("m_guid");
-                    if (elementId != null && elementId.stringValue == m_graphNode.guid)
+                    if (elementId != null && elementId.stringValue == m_graphNode.Guid)
                     {
                         m_serializedProperty = element;
                         break; // Exit loop once the matching property is found

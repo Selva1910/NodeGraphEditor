@@ -6,14 +6,14 @@ using UnityEngine;
 namespace NodeGraph
 {
     [Serializable]
-    public abstract class BaseGraphNode : INodeLifecycle
+    public abstract class BaseGraphNode : INodeLifecycle, INode
     {
         [SerializeField] private string m_guid;
         [SerializeField] private Rect m_position;
 
         public string typeName;
 
-        public string guid => m_guid;
+        public string Guid => m_guid;
         public Rect position => m_position;
 
         public bool IsCompleted { get; set; }
@@ -27,7 +27,7 @@ namespace NodeGraph
 
         private void NewGUID()
         {
-            m_guid = Guid.NewGuid().ToString();
+            m_guid = System.Guid.NewGuid().ToString();
         }
 
         public void SetPosition(Rect position)
@@ -46,7 +46,7 @@ namespace NodeGraph
             BaseGraphNode nextNodeInFlow = currentGraph.GetNodeFromOutput(m_guid, 0);
             if (nextNodeInFlow != null)
             {
-                return nextNodeInFlow.guid;
+                return nextNodeInFlow.Guid;
             }
             return string.Empty;
         }

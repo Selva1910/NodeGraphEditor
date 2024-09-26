@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace NodeGraph
 {
@@ -21,7 +22,13 @@ namespace NodeGraph
 
         private void Start()
         {
-            ExecuteAsset(graphInstance);
+            StartProcess(graphInstance);
+        }
+
+
+        public void StartProcess(GraphAssetSO instance)
+        {
+            ExecuteAsset(instance);
         }
 
         private void ExecuteAsset(GraphAssetSO codeGraphAsset)
@@ -50,20 +57,21 @@ namespace NodeGraph
                 return;
             }
 
-            if (visitedNodes.Contains(currentNode.guid))
+            if (visitedNodes.Contains(currentNode.Guid))
             {
-                Debug.LogError("Circular reference detected at node: " + currentNode.guid);
+                Debug.LogError("Circular reference detected at node: " + currentNode.Guid);
                 return;
             }
 
-            visitedNodes.Add(currentNode.guid);
+            visitedNodes.Add(currentNode.Guid);
 
             currentNode.Stage = LifeStage.Activating;
             currentNode.AwakeNode();
 
             currentNode.StartNode();
 
-            StartCoroutine(UpdateCurrentNodeTillComplete(currentNode, () => {
+            StartCoroutine(UpdateCurrentNodeTillComplete(currentNode, () =>
+            {
                 currentNode.ExitNode();
                 string nextNodeId = currentNode.OnProcess(graphInstance);
 
