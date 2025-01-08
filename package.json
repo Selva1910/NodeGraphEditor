@@ -1,6 +1,6 @@
 {
   "name": "com.cjhawk.graphnodeeditor",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "displayName": "GraphNodeEditor",
   "description": "A Simple Node Graph created from Scratch.",
   "unity": "2022.3",
