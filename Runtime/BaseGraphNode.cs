@@ -53,23 +53,23 @@ namespace NodeGraph
 
         public virtual void AwakeNode()
         {
-            Debug.Log($"Awake on Node {this.GetType()}");
+            //Debug.Log($"Awake on Node {this.GetType()}");
         }
 
         public virtual void StartNode()
         {
-            Debug.Log($"Start on Node {this.GetType()}");
+           // Debug.Log($"Start on Node {this.GetType()}");
         }
 
         public virtual void UpdateNode()
         {
-            Debug.Log($"Update on Node {this.GetType()}");
+            //Debug.Log($"Update on Node {this.GetType()}");
 
         }
 
         public virtual void ExitNode()
         {
-            Debug.Log($"Exit on Node {this.GetType()}");
+            //Debug.Log($"Exit on Node {this.GetType()}");
 
         }
     }

@@ -16,7 +16,7 @@ namespace NodeGraph
         public override void StartNode()
         {
             base.StartNode();
-            Debug.Log("Hello World, Start!");
+            //Debug.Log("Hello World, Start!");
             IsCompleted = true;
         }
 
