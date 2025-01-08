@@ -21,7 +21,7 @@ jobs:
           sed -i "s/\"version\": \".*\"/\"version\": \"$TAG\"/" Packages/com.cjhawk.graphnodeeditor/package.json
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Packages/com.cjhawk.graphnodeeditor/package.json
+          git add package.json
           git commit -m "Update package version to $TAG"
           git push
 
