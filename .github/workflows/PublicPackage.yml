@@ -23,11 +23,17 @@ jobs:
           if [ -f package.json ]; then
             sed -i "s/\"version\": \".*\"/\"version\": \"$TAG\"/" package.json
             cat package.json
+
+            # Switch to the branch before committing
+            DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
+            echo "Default branch: $DEFAULT_BRANCH"
+            git checkout $DEFAULT_BRANCH
+
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add package.json
             git commit -m "Update package version to $TAG"
-            git push
+            git push origin $DEFAULT_BRANCH
           else
             echo "Error: package.json not found at the root"
             exit 1
