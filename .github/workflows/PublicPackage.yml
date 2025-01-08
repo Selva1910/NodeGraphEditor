@@ -1,0 +1,36 @@
+name: Publish Git-Based Package
+
+on:
+  push:
+    tags:
+      - "v*.*.*"  # Trigger on version tags
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the repository
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      # Step 2: Update package version (optional)
+      - name: Update version
+        run: |
+          TAG=$(echo $GITHUB_REF | sed 's|refs/tags/||')
+          sed -i "s/\"version\": \".*\"/\"version\": \"$TAG\"/" Packages/com.cjhawk.graphnodeeditor/package.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Packages/com.cjhawk.graphnodeeditor/package.json
+          git commit -m "Update package version to $TAG"
+          git push
+
+      # Step 3: Create a release
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: "Release ${{ github.ref_name }}"
+          body: "Automatic release of Unity package version ${{ github.ref_name }}."
+          draft: false
+          prerelease: false
