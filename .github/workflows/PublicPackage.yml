@@ -1,12 +1,12 @@
-name: Publish Git-Based Package
+name: Publish UPM Package
 
 on:
   push:
     tags:
-      - "v*.*.*"  # Trigger on version tags
+      - "v*.*.*"  # Trigger on semantic version tags
 
 jobs:
-  publish:
+  update-version:
     runs-on: ubuntu-latest
 
     steps:
@@ -14,18 +14,27 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      # Step 2: Update package version (optional)
-      - name: Update version
+      # Step 2: Extract version tag and update package.json
+      - name: Update package.json version
         run: |
+          echo "GitHub Ref: $GITHUB_REF"
           TAG=$(echo $GITHUB_REF | sed 's|refs/tags/||')
-          sed -i "s/\"version\": \".*\"/\"version\": \"$TAG\"/" Packages/com.cjhawk.graphnodeeditor/package.json
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json
-          git commit -m "Update package version to $TAG"
-          git push
+          echo "Extracted TAG: $TAG"
+          if [ -f package.json ]; then
+            sed -i "s/\"version\": \".*\"/\"version\": \"$TAG\"/" package.json
+            cat package.json
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add package.json
+            git commit -m "Update package version to $TAG"
+            git push
+          else
+            echo "Error: package.json not found at the root"
+            exit 1
+          fi
+        shell: bash
 
-      # Step 3: Create a release
+      # Step 3: Optional - Create a GitHub release
       - name: Create GitHub Release
         uses: actions/create-release@v1
         with:
