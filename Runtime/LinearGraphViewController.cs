@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace NodeGraph
 {
-    public class GraphViewController : MonoBehaviour
+    public class LinearGraphViewController : MonoBehaviour
     {
         [SerializeField] GraphAssetSO m_graphAsset;
 
@@ -73,15 +73,37 @@ namespace NodeGraph
             StartCoroutine(UpdateCurrentNodeTillComplete(currentNode, () =>
             {
                 currentNode.ExitNode();
-                string nextNodeId = currentNode.OnProcess(graphInstance);
 
-                if (!string.IsNullOrEmpty(nextNodeId))
+                // Check if current node is a ParallelNode
+                if (currentNode is ParallelNode parallelNode)
                 {
-                    BaseGraphNode nextNode = graphInstance.GetNode(nextNodeId);
-                    ProcessAndMoveNextNode(nextNode, visitedNodes, depth + 1);
+                    // Get all output nodes from the parallel node
+                    List<BaseGraphNode> outputNodes = parallelNode.GetAllOutputNodes(graphInstance);
+                    
+                    if (outputNodes.Count > 0)
+                    {
+                        // Start all output nodes in parallel
+                        foreach (BaseGraphNode outputNode in outputNodes)
+                        {
+                            if (outputNode != null && !visitedNodes.Contains(outputNode.Guid))
+                            {
+                                ProcessAndMoveNextNode(outputNode, visitedNodes, depth + 1);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // Standard single output execution
+                    string nextNodeId = currentNode.OnProcess(graphInstance);
+
+                    if (!string.IsNullOrEmpty(nextNodeId))
+                    {
+                        BaseGraphNode nextNode = graphInstance.GetNode(nextNodeId);
+                        ProcessAndMoveNextNode(nextNode, visitedNodes, depth + 1);
+                    }
                 }
             }));
-
         }
         IEnumerator UpdateCurrentNodeTillComplete(BaseGraphNode node, Action ActionCallBack)
         {

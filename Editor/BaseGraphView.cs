@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEditor.UIElements;
@@ -25,6 +26,10 @@ namespace NodeGraph.Editor
 
         private GraphWindowSearchProvider m_searchProvider;
 
+        // Clipboard for copy/paste functionality
+        private List<BaseGraphNode> m_clipboard = new List<BaseGraphNode>();
+        private Vector2 m_lastMousePosition = Vector2.zero;
+
         public BaseGraphView(SerializedObject serializedObject, GraphEditorWindow window)
         {
             m_serializedObject = serializedObject;
@@ -47,7 +52,6 @@ namespace NodeGraph.Editor
             background.name = "Grid";
             Insert(0, background);
 
-
             // Setup zoom and pan
             SetupZoom(ContentZoomer.DefaultMinScale, ContentZoomer.DefaultMaxScale);
 
@@ -60,6 +64,253 @@ namespace NodeGraph.Editor
             DrawConnections();
 
             graphViewChanged += OnGraphViewChangedEvent;
+
+            // Register for keyboard events to frame nodes
+            RegisterCallback<KeyDownEvent>(OnKeyDown);
+            RegisterCallback<MouseMoveEvent>(OnMouseMove);
+            RegisterCallback<ContextualMenuPopulateEvent>(BuildContextualMenu, TrickleDown.TrickleDown);
+        }
+
+        private void OnMouseMove(MouseMoveEvent evt)
+        {
+            m_lastMousePosition = evt.mousePosition;
+        }
+
+        private void OnKeyDown(KeyDownEvent evt)
+        {
+            // Press 'F' to frame all nodes
+            if (evt.keyCode == KeyCode.F && !evt.ctrlKey && !evt.commandKey)
+            {
+                FrameAll();
+                evt.StopPropagation();
+            }
+
+            // Ctrl+C / Cmd+C to copy selected nodes
+            if ((evt.ctrlKey || evt.commandKey) && evt.keyCode == KeyCode.C)
+            {
+                CopySelectedNodes();
+                evt.StopPropagation();
+            }
+
+            // Ctrl+V / Cmd+V to paste nodes
+            if ((evt.ctrlKey || evt.commandKey) && evt.keyCode == KeyCode.V)
+            {
+                PasteNodes();
+                evt.StopPropagation();
+            }
+
+            // Delete to remove selected nodes
+            if (evt.keyCode == KeyCode.Delete)
+            {
+                DeleteSelectedNodes();
+                evt.StopPropagation();
+            }
+        }
+
+        private void BuildContextualMenu(ContextualMenuPopulateEvent evt)
+        {
+            var selectedNodes = selection.OfType<GraphNodeEditor>().ToList();
+
+            if (selectedNodes.Count > 0)
+            {
+                evt.menu.AppendAction("Copy", (a) => CopySelectedNodes(), DropdownMenuAction.AlwaysEnabled);
+            }
+
+            if (m_clipboard.Count > 0)
+            {
+                evt.menu.AppendAction("Paste", (a) => PasteNodes(), DropdownMenuAction.AlwaysEnabled);
+            }
+
+            if (selectedNodes.Count > 0)
+            {
+                evt.menu.AppendSeparator();
+                evt.menu.AppendAction("Delete", (a) => DeleteSelectedNodes(), DropdownMenuAction.AlwaysEnabled);
+            }
+        }
+
+        private void CopySelectedNodes()
+        {
+            m_clipboard.Clear();
+            var selectedNodes = selection.OfType<GraphNodeEditor>().ToList();
+
+            if (selectedNodes.Count == 0)
+                return;
+
+            // Deep copy selected nodes
+            foreach (var editorNode in selectedNodes)
+            {
+                BaseGraphNode copiedNode = DeepCopyNode(editorNode.Node);
+                m_clipboard.Add(copiedNode);
+            }
+
+            Debug.Log($"Copied {m_clipboard.Count} node(s)");
+        }
+
+        private void PasteNodes()
+        {
+            if (m_clipboard.Count == 0)
+                return;
+
+            Undo.RecordObject(m_serializedObject.targetObject, "Pasted Nodes");
+
+            ClearSelection();
+
+            // Dictionary to map old GUIDs to new nodes for connection recreation
+            Dictionary<string, BaseGraphNode> nodeMapping = new Dictionary<string, BaseGraphNode>();
+            List<BaseGraphNode> newNodes = new List<BaseGraphNode>();
+
+            // Create all new nodes first with offset
+            Vector2 offset = new Vector2(50, 50);
+            foreach (var clipboardNode in m_clipboard)
+            {
+                BaseGraphNode newNode = DeepCopyNode(clipboardNode);
+                
+                // Offset the position
+                Rect newPosition = newNode.position;
+                newPosition.position += offset;
+                newNode.SetPosition(newPosition);
+
+                newNodes.Add(newNode);
+                nodeMapping[clipboardNode.Guid] = newNode;
+            }
+
+            // Add all nodes to the graph first
+            foreach (var newNode in newNodes)
+            {
+                m_codeGraph.Nodes.Add(newNode);
+            }
+
+            // Update serialized object before creating editor nodes
+            m_serializedObject.Update();
+            m_serializedObject.ApplyModifiedProperties();
+
+            // Now add nodes to the graph view
+            foreach (var newNode in newNodes)
+            {
+                AddNodeToGraph(newNode);
+                // Auto-select the pasted node
+                AddToSelection(m_nodeDitionary[newNode.Guid]);
+            }
+
+            // Recreate connections between pasted nodes
+            foreach (var connection in m_codeGraph.Connections.ToList())
+            {
+                bool inputInClipboard = nodeMapping.ContainsKey(connection.inputPort.nodeId);
+                bool outputInClipboard = nodeMapping.ContainsKey(connection.outputPort.nodeId);
+
+                // Only recreate connections where both nodes were copied
+                if (inputInClipboard && outputInClipboard)
+                {
+                    var newInputNode = nodeMapping[connection.inputPort.nodeId];
+                    var newOutputNode = nodeMapping[connection.outputPort.nodeId];
+
+                    GraphConnection newConnection = new GraphConnection(
+                        new GraphConnectionPort(newInputNode.Guid, connection.inputPort.portIndex),
+                        new GraphConnectionPort(newOutputNode.Guid, connection.outputPort.portIndex)
+                    );
+
+                    m_codeGraph.Connections.Add(newConnection);
+                }
+            }
+
+            m_serializedObject.ApplyModifiedProperties();
+            Bind();
+
+            Debug.Log($"Pasted {m_clipboard.Count} node(s)");
+        }
+
+        private void DeleteSelectedNodes()
+        {
+            var selectedNodes = selection.OfType<GraphNodeEditor>().ToList();
+
+            if (selectedNodes.Count == 0)
+                return;
+
+            Undo.RecordObject(m_serializedObject.targetObject, "Deleted Nodes");
+
+            foreach (var editorNode in selectedNodes)
+            {
+                // Remove all connections connected to this node
+                var connectionsToRemove = m_codeGraph.Connections
+                    .Where(c => c.inputPort.nodeId == editorNode.Node.Guid || c.outputPort.nodeId == editorNode.Node.Guid)
+                    .ToList();
+
+                foreach (var connection in connectionsToRemove)
+                {
+                    m_codeGraph.Connections.Remove(connection);
+                }
+
+                RemoveNode(editorNode);
+            }
+
+            m_serializedObject.ApplyModifiedProperties();
+            ClearSelection();
+
+            Debug.Log($"Deleted {selectedNodes.Count} node(s)");
+        }
+
+        /// <summary>
+        /// Creates a deep copy of a node with all its properties
+        /// </summary>
+        private BaseGraphNode DeepCopyNode(BaseGraphNode original)
+        {
+            // Create a new instance of the same type using Activator
+            BaseGraphNode copy = (BaseGraphNode)System.Activator.CreateInstance(original.GetType());
+
+            // Copy all serializable fields from the original
+            FieldInfo[] fields = original.GetType().GetFields(
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+            foreach (FieldInfo field in fields)
+            {
+                // Skip the GUID field - we'll generate a new one
+                if (field.Name == "m_guid")
+                    continue;
+
+                try
+                {
+                    object value = field.GetValue(original);
+                    field.SetValue(copy, value);
+                }
+                catch
+                {
+                    // Skip fields that can't be copied easily
+                }
+            }
+
+            // Generate new GUID for the copy
+            FieldInfo guidField = original.GetType().GetField("m_guid",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            if (guidField != null)
+            {
+                guidField.SetValue(copy, System.Guid.NewGuid().ToString());
+            }
+
+            return copy;
+        }
+
+        /// <summary>
+        /// Frames all nodes on the screen using GraphView's built-in selection framing
+        /// </summary>
+        public void FrameAll()
+        {
+            if (m_graphNodes == null || m_graphNodes.Count == 0)
+            {
+                return;
+            }
+
+            // Select all nodes
+            ClearSelection();
+            foreach (var node in m_graphNodes)
+            {
+                AddToSelection(node);
+            }
+
+            // Frame the selection using built-in method
+            FrameSelection();
+
+            // Deselect all
+            ClearSelection();
         }
 
 
@@ -77,7 +328,8 @@ namespace NodeGraph.Editor
         {
             GraphNodeEditor inputNode = GetNode(connection.inputPort.nodeId);
             GraphNodeEditor outputNode = GetNode(connection.outputPort.nodeId);
-
+            
+            
             if (inputNode == null || outputNode == null)
             {
                 Debug.LogWarning("Input or output node not found for connection.");
@@ -179,6 +431,9 @@ namespace NodeGraph.Editor
             GraphNodeEditor outputNode = (GraphNodeEditor)edge.output.node;
             int outputIndex = outputNode.Ports.IndexOf(edge.output);
 
+            // Check if the output port already has a connection and disconnect it
+            DisconnectExistingOutputConnection(outputNode.Node.Guid, outputIndex);
+
             GraphConnection connection = new GraphConnection(
                 new GraphConnectionPort(inputNode.Node.Guid, inputIndex),
                 new GraphConnectionPort(outputNode.Node.Guid, outputIndex)
@@ -193,6 +448,36 @@ namespace NodeGraph.Editor
 
             // Add to the dictionary for tracking
             m_connectionDictionary[edge] = connection;
+        }
+
+        /// <summary>
+        /// Disconnects any existing connection on the output port
+        /// </summary>
+        private void DisconnectExistingOutputConnection(string outputNodeGuid, int outputPortIndex)
+        {
+            // Find all connections using this output port
+            List<GraphConnection> connectionsToRemove = m_codeGraph.Connections
+                .Where(c => c.outputPort.nodeId == outputNodeGuid && c.outputPort.portIndex == outputPortIndex)
+                .ToList();
+
+            foreach (var connection in connectionsToRemove)
+            {
+                m_codeGraph.Connections.Remove(connection);
+
+                // Find and remove the corresponding edge from the view
+                var edgesToRemove = m_connectionDictionary
+                    .Where(kvp => kvp.Value.Equals(connection))
+                    .Select(kvp => kvp.Key)
+                    .ToList();
+
+                foreach (var edge in edgesToRemove)
+                {
+                    RemoveElement(edge);
+                    m_connectionDictionary.Remove(edge);
+                }
+            }
+
+            m_serializedObject.ApplyModifiedProperties();
         }
 
         private void RemoveConnection(Edge e)

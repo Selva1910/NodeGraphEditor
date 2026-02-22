@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement class="container">
+        <ui:Label text="Scene Creator" class="header" />
+        <ui:Button text="Create Scene" name="create-scene-button" />
+    </ui:VisualElement>
+</ui:UXML>

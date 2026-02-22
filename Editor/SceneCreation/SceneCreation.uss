@@ -1,0 +1,14 @@
+.container {
+    flex-direction: column;
+    padding: 10px;
+    align-items: center;
+}
+
+.header {
+    font-size: 20px;
+    unity-font-style: bold;
+    color: white;
+    background-color: #34495e;
+    padding: 10px;
+    margin-bottom: 10px;
+}

@@ -17,7 +17,13 @@ namespace NodeGraph.Editor
 
         private void OnGUI()
         {
-            GUILayout.Label(currentNode.Guid);
+            if (currentNode == null)
+            {
+                GUILayout.Label("No node selected");
+                return;
+            }
+
+            GUILayout.Label(currentNode.Guid);            
         }
     }
 }

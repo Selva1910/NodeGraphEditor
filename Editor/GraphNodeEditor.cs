@@ -28,8 +28,10 @@ namespace NodeGraph.Editor
             extensionContainer.style.backgroundColor = new Color(.2f, .2f, .2f, .8f);
 
             m_graphNode = node;
+            
             m_Ports = new List<Port>();
 
+            
             m_serializedObject = codeGraphObject;
 
             Type typeInfo = node.GetType();
@@ -52,27 +54,17 @@ namespace NodeGraph.Editor
                     DrawFlowOutputs(node);
                 }
 
-                if (info.hasFlowInputs)
+                bool drawInputs = info.hasFlowInputs;
+                // If this is an event node and it's configured to allow external triggers,
+                // draw the input port even though NodeInfo hasFlowInputs may be false.
+                if (!drawInputs && node is BaseEventNode evtNode)
                 {
-                    DrawFlowInputs(node);
+                    drawInputs = evtNode.allowExternalTrigger;
                 }
 
-                foreach (FieldInfo property in typeInfo.GetFields())
+                if (drawInputs)
                 {
-                    if (property.GetCustomAttribute<ExposedPropertyAttribute>() is ExposedPropertyAttribute exposedProperty)
-                    {
-                        string fieldName = string.Empty;
-                        if (property.GetCustomAttribute<DisplayNameAttribute>() is DisplayNameAttribute displayName)
-                        {
-                            fieldName = displayName.Name;
-                        }
-                        else
-                        {
-                            fieldName = property.Name;
-                        }
-                        PropertyField field = DrawProperty(property.Name, fieldName);
-                        // Register value change callbacks here if needed
-                    }
+                    DrawFlowInputs(node);
                 }
             }
             else
@@ -83,12 +75,57 @@ namespace NodeGraph.Editor
             RefreshExpandedState();
             RefreshPorts();
         }
+
+        private void DrawNodeProperties(Type typeInfo)
+        {
+            foreach (FieldInfo property in typeInfo.GetFields())
+            {
+                if (property.GetCustomAttribute<ExposedPropertyAttribute>() is ExposedPropertyAttribute exposedProperty)
+                {
+                    string fieldName = string.Empty;
+                    if (property.GetCustomAttribute<DisplayNameAttribute>() is DisplayNameAttribute displayName)
+                    {
+                        fieldName = displayName.Name;
+                    }
+                    else if (property.GetCustomAttribute<ExposedInNodeAttribute>() is ExposedInNodeAttribute exposedInNodeAttribute)
+                    {
+                        extensionContainer.Add( DrawInNodes(property.Name, exposedInNodeAttribute));
+                    }
+                    else if (property.GetCustomAttribute<ExposedOutNodeAttribute>() is ExposedOutNodeAttribute exposedOutNodeAttribute)
+                    {
+                        extensionContainer.Add( DrawOutNodes(property.Name, exposedOutNodeAttribute));
+                    }
+                    else
+                    {
+                        fieldName = property.Name;
+                    }
+                    VisualElement field = DrawProperty(property.Name, fieldName);
+                    // Register value change callbacks here if needed
+                }
+            }
+        }
+
+        private VisualElement DrawInNodes(string propertyName, ExposedInNodeAttribute exposedInNodeAttribute)
+        {
+            Port inputPort = InstantiatePort(Orientation.Horizontal, Direction.Input, Port.Capacity.Multi, typeof(float));
+            inputPort.portName = propertyName;
+            inputPort.portColor = Color.red;
+            return inputPort;
+        }
+        private VisualElement DrawOutNodes(string propertyName, ExposedOutNodeAttribute exposedOutNodeAttribute)
+        {
+            Port inputPort = InstantiatePort(Orientation.Horizontal, Direction.Output, Port.Capacity.Multi, typeof(float));
+            inputPort.portName = propertyName;
+            inputPort.portColor = Color.red;
+            return inputPort;
+        }
+
         public override void OnSelected()
         {
-            Debug.Log(this.m_graphNode.typeName);
+            //Debug.Log(this.m_graphNode);
             NodeInspector.ShowInspector(m_graphNode);
         }
-        private PropertyField DrawProperty(string propertyName, string displayName)
+        private VisualElement DrawProperty(string propertyName, string displayName)
         {
             if (m_serializedProperty == null)
             {
@@ -109,14 +146,108 @@ namespace NodeGraph.Editor
                 return null;
             }
 
-            PropertyField field = new PropertyField(prop)
+            if (prop.propertyType == SerializedPropertyType.ObjectReference)
             {
-                bindingPath = prop.propertyPath
-            };
-            field.label = string.IsNullOrWhiteSpace(displayName) ? propertyName : displayName;
-            extensionContainer.Add(field);
+                ObjectField objectField = new ObjectField(displayName)
+                {
+                    objectType = typeof(SceneObject),
+                    allowSceneObjects = true,
+                    bindingPath = prop.propertyPath
+                };
 
-            return field;
+                objectField.BindProperty(prop); // Properly bind it
+                extensionContainer.Add(objectField);
+                return objectField;
+            }
+            else
+            {
+                PropertyField field = new PropertyField(prop)
+                {
+                    bindingPath = prop.propertyPath
+                };
+                field.label = string.IsNullOrWhiteSpace(displayName) ? propertyName : displayName;
+                extensionContainer.Add(field);
+
+                // If this property controls number of outputs for ParallelNode, refresh ports on change
+                if (propertyName == "numberOfOutputs")
+                {
+                    field.RegisterValueChangeCallback((evt) =>
+                    {
+                        // Apply changes so the underlying object has the new value
+                        try
+                        {
+                            m_serializedObject.ApplyModifiedProperties();
+                        }
+                        catch { }
+
+                        RefreshFlowPorts();
+                    });
+                }
+
+                // If this property toggles external trigger for event nodes, refresh ports on change
+                if (propertyName == "allowExternalTrigger")
+                {
+                    field.RegisterValueChangeCallback((evt) =>
+                    {
+                        try { m_serializedObject.ApplyModifiedProperties(); } catch { }
+                        RefreshFlowPorts();
+                    });
+                }
+
+                return field;
+            }
+        }
+
+        private void RefreshFlowPorts()
+        {
+            // Remove existing input/output ports from containers and m_Ports
+            var portsToRemove = new List<Port>();
+            foreach (var p in m_Ports)
+            {
+                if (p.direction == Direction.Output || p.direction == Direction.Input)
+                {
+                    portsToRemove.Add(p);
+                }
+            }
+
+            foreach (var p in portsToRemove)
+            {
+                // remove from input/output container if present
+                try { inputContainer.Remove(p); } catch { }
+                try { outputContainer.Remove(p); } catch { }
+                m_Ports.Remove(p);
+            }
+
+            // Recreate flow ports based on current node metadata and serialized values
+            Type typeInfo = m_graphNode.GetType();
+            var info = typeInfo.GetCustomAttribute<NodeInfoAttribute>();
+
+            bool drawOutputs = info != null && info.hasFlowOutputs;
+            bool drawInputs = info != null && info.hasFlowInputs;
+
+            if (!drawInputs && m_graphNode is BaseEventNode evtNode)
+            {
+                drawInputs = evtNode.allowExternalTrigger;
+            }
+
+            // Preserve original ordering: draw outputs first, then inputs
+            if (drawOutputs)
+            {
+                DrawFlowOutputs(m_graphNode);
+            }
+
+            if (drawInputs)
+            {
+                DrawFlowInputs(m_graphNode);
+            }
+
+            // Refresh visuals
+            RefreshExpandedState();
+            RefreshPorts();
+            this.MarkDirtyRepaint();
+
+            var gv = this.GetFirstAncestorOfType<UnityEditor.Experimental.GraphView.GraphView>();
+            if (gv != null) gv.MarkDirtyRepaint();
         }
 
         private void FetchBaseSerializeProperty()
@@ -150,13 +281,56 @@ namespace NodeGraph.Editor
 
         private void DrawFlowOutputs(BaseGraphNode courseNode)
         {
+            // Special handling for ParallelNode - create multiple output ports
+            if (courseNode is ParallelNode parallelNode)
+            {
+                int outputs = GetParallelOutputCount(parallelNode);
+                for (int i = 0; i < outputs; i++)
+                {
+                    Port outputPort = InstantiatePort(Orientation.Horizontal, Direction.Output, Port.Capacity.Single, typeof(PortTypes.FlowPort));
+                    outputPort.portName = $"Out {i}";
+                    outputPort.tooltip = $"Output {i}";
+                    m_Ports.Add(outputPort);
+                    outputContainer.Add(outputPort);
+                }
+            }
+            else
+            {
+                // Standard single output port for regular nodes
+                m_outputPort = InstantiatePort(Orientation.Horizontal, Direction.Output, Port.Capacity.Multi, typeof(PortTypes.FlowPort));
+                m_outputPort.portName = "Out";
+                m_outputPort.tooltip = "The Flow Output";
+                m_Ports.Add(m_outputPort);
+                outputContainer.Add(m_outputPort);
+            }
+        }
+
+        public void AddOutputPort()
+        {
             m_outputPort = InstantiatePort(Orientation.Horizontal, Direction.Output, Port.Capacity.Multi, typeof(PortTypes.FlowPort));
             m_outputPort.portName = "Out";
             m_outputPort.tooltip = "The Flow Output";
             m_Ports.Add(m_outputPort);
             outputContainer.Add(m_outputPort);
         }
+        
+        private int GetParallelOutputCount(ParallelNode parallelNode)
+        {
+            if (m_serializedProperty != null)
+            {
+                try
+                {
+                    var prop = m_serializedProperty.FindPropertyRelative("numberOfOutputs");
+                    if (prop != null && prop.propertyType == SerializedPropertyType.Integer)
+                    {
+                        return Mathf.Max(0, prop.intValue);
+                    }
+                }
+                catch { }
+            }
 
+            return Mathf.Max(0, parallelNode.numberOfOutputs);
+        }
         public void SavePosition()
         {
             m_graphNode.SetPosition(GetPosition());
