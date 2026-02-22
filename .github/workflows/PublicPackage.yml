@@ -20,13 +20,13 @@ jobs:
       - name: Prepare and Update Version
         id: prep
         run: |
-          # 1. Strip 'v' from tag (v1.0.5 -> 1.0.5) for Unity compatibility
+          # Strip 'v' for Unity (v1.0.6 -> 1.0.6)
           RAW_TAG=${{ github.ref_name }}
           CLEAN_TAG=$(echo $RAW_TAG | sed 's/^v//')
           echo "tag=$CLEAN_TAG" >> $GITHUB_OUTPUT
 
-          # 2. Update package.json
           if [ -f package.json ]; then
+            # Update the version string in package.json
             sed -i "s/\"version\": \".*\"/\"version\": \"$CLEAN_TAG\"/" package.json
           else
             echo "package.json not found!" && exit 1
@@ -38,19 +38,22 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
+          # This is the critical fix:
+          # Ensure local 'main' exists and tracks the remote 'main'
+          git checkout main || git checkout -b main origin/main
+
           git add package.json
-          # [optional] also add NOTICE or LICENSE if they were changed
-          
+          # If you've updated your NOTICE or LICENSE, they get picked up here too
           git commit -m "chore: bump version to ${{ steps.prep.outputs.tag }}"
           
-          # Push the local 'package.json' update back to the main branch
-          git push origin HEAD:main
+          git push origin main
         shell: bash
 
       - name: Create .tgz Artifact
         run: |
           PACKAGE_NAME="com.cjhawk.graphnodeeditor-${{ steps.prep.outputs.tag }}.tgz"
-          tar -czf "$PACKAGE_NAME" --exclude='.git*' .
+          # The fix: Exclude any .tgz files so tar doesn't try to include its own output
+          tar -czf "$PACKAGE_NAME" --exclude='.git*' --exclude='*.tgz' .
           echo "PACKAGE_PATH=$PACKAGE_NAME" >> $GITHUB_ENV
 
       - name: Create GitHub Release
@@ -61,9 +64,13 @@ jobs:
           body: |
             ## Node Graph Editor ${{ steps.prep.outputs.tag }}
             
-            The `package.json` has been automatically updated to version `${{ steps.prep.outputs.tag }}`.
+            The `package.json` version has been synced to `${{ steps.prep.outputs.tag }}`.
             
             ### Installation
             - **Git URL:** `https://github.com/Selva1910/NodeGraphEditor.git#${{ github.ref_name }}`
-            - **Tarball:** Download the `.tgz` below for manual installation.
+            - **Tarball:** Use "Add package from tarball" in Unity and select the `.tgz` below.
+            
+            ---
+            *Author: Selvaraj Balakrishnan*
+            *License: AGPLv3 (Attribution Required)*
           files: ${{ env.PACKAGE_PATH }}
