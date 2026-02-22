@@ -5,63 +5,61 @@ on:
     branches:
       - main
     paths:
-      - 'package.json' # Only runs when this file is changed
+      - 'package.json'
 
 jobs:
-  release-on-version-change:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
+      # Step 1: Check out the repository
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Extract Version from package.json
+      # Step 2: Setup Node.js environment
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Step 3: Extract version for Tagging
+      - name: Extract Version
         id: get_version
         run: |
-          # Pulls the version string from package.json
           VERSION=$(grep '"version":' package.json | cut -d'"' -f4)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Detected Version: $VERSION"
         shell: bash
 
-      - name: Create UPM Package (tarball)
+      # Step 4: Run npm pack
+      - name: Pack Package
+        id: pack
         run: |
-          # 1. Define names
-          VERSION=${{ steps.get_version.outputs.VERSION }}
-          PACKAGE_NAME="com.cjhawk.graphnodeeditor-${VERSION}.tgz"
-          
-          # 2. Run tar, but output to /tmp to avoid the "file changed" error
-          tar -czf "/tmp/$PACKAGE_NAME" \
-            --exclude='.git*' \
-            --exclude='.github*' \
-            --exclude='*.tgz' \
-            .
-          
-          # 3. Move it back to the workspace for the release step
-          mv "/tmp/$PACKAGE_NAME" .
-          echo "PACKAGE_PATH=$PACKAGE_NAME" >> $GITHUB_ENV
+          # npm pack creates a .tgz file and outputs the name to the console
+          FILENAME=$(npm pack)
+          echo "PACKAGE_FILENAME=$FILENAME" >> $GITHUB_ENV
+          echo "Created package: $FILENAME"
         shell: bash
 
+      # Step 5: Create Release and Upload the .tgz
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          # Uses the version from package.json as the tag name (e.g., 1.0.8)
           tag_name: v${{ steps.get_version.outputs.VERSION }}
           name: "Release ${{ steps.get_version.outputs.VERSION }}"
           body: |
             ## Node Graph Editor ${{ steps.get_version.outputs.VERSION }}
             
-            This release was automatically generated based on updates to `package.json`.
+            Automated release from `main` branch update.
             
             ### Installation
             - **Git URL:** `https://github.com/Selva1910/NodeGraphEditor.git#v${{ steps.get_version.outputs.VERSION }}`
-            - **Tarball:** Download the `.tgz` below and use "Add package from tarball" in Unity.
+            - **Tarball:** Download the `.tgz` below and "Add package from tarball" in Unity.
             
             ---
             *Author: Selvaraj Balakrishnan*
             *License: AGPLv3 (Attribution Required)*
-          files: ${{ env.PACKAGE_PATH }}
+          files: ${{ env.PACKAGE_FILENAME }}
           draft: false
           prerelease: false
