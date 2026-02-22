@@ -2,25 +2,30 @@
   "name": "com.cjhawk.graphnodeeditor",
   "version": "1.0.5",
   "displayName": "Node Graph Editor",
-  "description": "A visual node graph editor for Unity, built from scratch using the GraphView API — designed to power event-driven, flow-based gameplay logic through a ScriptableObject Architecture.",
+  "description": "A visual node graph editor for Unity, built from scratch using the GraphView API — designed to power event-driven, flow-based gameplay logic through a ScriptableObject architecture.",
   "unity": "2022.3",
   "unityRelease": "21f1",
-  "documentationUrl": "",
+  "documentationUrl": "https://github.com/Selva1910/NodeGraphEditor#readme",
   "changelogUrl": "https://github.com/Selva1910/NodeGraphEditor/blob/main/CHANGELOG.md",
   "licensesUrl": "https://github.com/Selva1910/NodeGraphEditor/blob/main/LICENSE",
   "dependencies": {},
   "keywords": [
     "grapheditor",
     "graphnodeeditor",
-    "visualgrapheditor"
+    "NodeGraphEditor",
+    "visualgrapheditor",
+    "unity",
+    "graphview",
+    "scriptableobject"
   ],
   "author": {
-    "name": "SelvarajBalakrishnan",
+    "name": "Selvaraj Balakrishnan",
     "email": "bselva1910@gmail.com",
     "url": "https://selva1910.github.io/"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/Selva1910/NodeGraphEditor.git"
-  }
+  },
+  "license": "AGPL-3.0-only"
 }

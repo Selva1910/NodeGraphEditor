@@ -6,7 +6,7 @@ namespace NodeGraph.Editor
 {
     public class SceneCreation : EditorWindow
     {
-        [MenuItem("Window/NodeGraph/Scene Creation")]
+        
         public static void ShowWindow()
         {
             SceneCreation wnd = GetWindow<SceneCreation>();

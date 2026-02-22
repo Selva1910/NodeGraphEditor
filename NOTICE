@@ -1,0 +1,13 @@
+Node Graph Editor (com.cjhawk.graphnodeeditor)
+Copyright (C) 2026 Selvaraj Balakrishnan
+
+LEGAL NOTICE (AGPLv3 Section 7):
+1. ATTRIBUTION: Any modified version of this Software must prominently 
+   display the original author's name ("Selvaraj Balakrishnan") and 
+   the original repository link (https://github.com/Selva1910/NodeGraphEditor) 
+   within the Unity Editor UI (e.g., in a "Credits" or "About" window).
+
+2. SOURCE INTEGRITY: All modifications submitted or redistributed are 
+   intended for the enhancement of the original Node Graph Editor 
+   architecture. Original copyright headers in source files must 
+   remain intact.
