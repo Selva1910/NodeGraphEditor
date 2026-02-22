@@ -79,7 +79,7 @@ namespace NodeGraph
                 {
                     // Get all output nodes from the parallel node
                     List<BaseGraphNode> outputNodes = parallelNode.GetAllOutputNodes(graphInstance);
-                    
+
                     if (outputNodes.Count > 0)
                     {
                         // Start all output nodes in parallel

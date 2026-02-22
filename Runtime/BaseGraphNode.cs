@@ -11,7 +11,12 @@ namespace NodeGraph
         [SerializeField] private string m_guid;
         [SerializeField] private Rect m_position;
 
-        public string typeName;
+        private string typeName;
+
+        public void SetTypeName(string name)
+        {
+            typeName = name;
+        }
 
         public string Guid => m_guid;
         public Rect position => m_position;

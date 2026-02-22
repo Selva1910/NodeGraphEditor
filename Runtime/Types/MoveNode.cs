@@ -14,6 +14,7 @@ namespace NodeGraph
         
         [ExposedProperty]
         [DisplayName("Target")]
+        [SceneObjectPicker]
         public string moveObject;
         
         [ExposedProperty]

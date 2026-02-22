@@ -164,7 +164,7 @@ namespace NodeGraph.Editor
             foreach (var clipboardNode in m_clipboard)
             {
                 BaseGraphNode newNode = DeepCopyNode(clipboardNode);
-                
+
                 // Offset the position
                 Rect newPosition = newNode.position;
                 newPosition.position += offset;
@@ -222,31 +222,36 @@ namespace NodeGraph.Editor
         private void DeleteSelectedNodes()
         {
             var selectedNodes = selection.OfType<GraphNodeEditor>().ToList();
+            if (selectedNodes.Count == 0) return;
 
-            if (selectedNodes.Count == 0)
-                return;
+            // Use Undo.RecordObject BEFORE making changes
+            Undo.RecordObject(m_codeGraph, "Deleted Nodes");
 
-            Undo.RecordObject(m_serializedObject.targetObject, "Deleted Nodes");
+            // Close inspector immediately to stop all property tracking
+            NodeInspector.ClearInspector();
 
             foreach (var editorNode in selectedNodes)
             {
-                // Remove all connections connected to this node
+                // 1. Clean up connections first
                 var connectionsToRemove = m_codeGraph.Connections
                     .Where(c => c.inputPort.nodeId == editorNode.Node.Guid || c.outputPort.nodeId == editorNode.Node.Guid)
                     .ToList();
 
                 foreach (var connection in connectionsToRemove)
                 {
-                    m_codeGraph.Connections.Remove(connection);
+                    // Find the edge associated with this connection and remove it from UI
+                    var edge = m_connectionDictionary.FirstOrDefault(x => x.Value.Equals(connection)).Key;
+                    if (edge != null) RemoveConnection(edge);
+                    else m_codeGraph.Connections.Remove(connection);
                 }
 
+                // 2. Remove the node
                 RemoveNode(editorNode);
             }
 
+            // 3. Apply changes and clear selection
             m_serializedObject.ApplyModifiedProperties();
             ClearSelection();
-
-            Debug.Log($"Deleted {selectedNodes.Count} node(s)");
         }
 
         /// <summary>
@@ -328,8 +333,8 @@ namespace NodeGraph.Editor
         {
             GraphNodeEditor inputNode = GetNode(connection.inputPort.nodeId);
             GraphNodeEditor outputNode = GetNode(connection.outputPort.nodeId);
-            
-            
+
+
             if (inputNode == null || outputNode == null)
             {
                 Debug.LogWarning("Input or output node not found for connection.");
@@ -384,6 +389,7 @@ namespace NodeGraph.Editor
         }
         private GraphViewChange OnGraphViewChangedEvent(GraphViewChange graphViewChange)
         {
+            // Handle Movement
             if (graphViewChange.movedElements != null)
             {
                 Undo.RecordObject(m_serializedObject.targetObject, "Moved Elements");
@@ -393,24 +399,32 @@ namespace NodeGraph.Editor
                 }
             }
 
+            // PLACE THE REMOVAL LOGIC HERE
             if (graphViewChange.elementsToRemove != null)
             {
-                Undo.RecordObject(m_serializedObject.targetObject, "Removed Item from Graph");
-                List<GraphNodeEditor> nodes = graphViewChange.elementsToRemove.OfType<GraphNodeEditor>().ToList();
-                if (nodes.Count > 0)
+                // Record the state of the ScriptableObject before we delete anything
+                Undo.RecordObject(m_codeGraph, "Removed Item from Graph");
+
+                // Use a list to avoid "collection modified" errors while iterating
+                var elements = graphViewChange.elementsToRemove.ToList();
+
+                foreach (var element in elements)
                 {
-                    foreach (var node in nodes)
+                    if (element is GraphNodeEditor node)
                     {
                         RemoveNode(node);
                     }
+                    else if (element is Edge edge)
+                    {
+                        RemoveConnection(edge);
+                    }
                 }
 
-                foreach (Edge e in graphViewChange.elementsToRemove.OfType<Edge>())
-                {
-                    RemoveConnection(e);
-                }
+                // After cleaning up nodes and connections, apply changes
+                m_serializedObject.ApplyModifiedProperties();
             }
 
+            // Handle New Connections
             if (graphViewChange.edgesToCreate != null)
             {
                 Undo.RecordObject(m_serializedObject.targetObject, "Added Connection");
@@ -496,7 +510,7 @@ namespace NodeGraph.Editor
             }
             else
             {
-                Debug.LogWarning("Failed to remove connection: Edge not found in dictionary.");
+                //Debug.LogWarning("Failed to remove connection: Edge not found in dictionary.");
             }
 
             // Remove the edge from the graph view
@@ -506,11 +520,22 @@ namespace NodeGraph.Editor
 
         private void RemoveNode(GraphNodeEditor editorNode)
         {
+            if (editorNode == null) return;
+
+            // 1. Clear the Inspector if this node is the one being inspected
+            // This prevents the 'ObjectDisposedException' from a deleted property
+            NodeInspector.ClearInspector();
+
+            // 2. Remove from data collections
             m_codeGraph.Nodes.Remove(editorNode.Node);
             m_nodeDitionary.Remove(editorNode.Node.Guid);
             m_graphNodes.Remove(editorNode);
-            m_serializedObject.Update();
 
+            // 3. Physically remove the VisualElement from the GraphView
+            RemoveElement(editorNode);
+
+            // 4. Sync serialization
+            m_serializedObject.Update();
         }
 
         private void DrawNodes()
@@ -541,7 +566,7 @@ namespace NodeGraph.Editor
 
         private void AddNodeToGraph(BaseGraphNode node)
         {
-            node.typeName = node.GetType().AssemblyQualifiedName;
+            node.SetTypeName(node.GetType().Name);
 
             GraphNodeEditor editorNode = new GraphNodeEditor(node, m_serializedObject);
             editorNode.SetPosition(node.position);

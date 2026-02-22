@@ -4,9 +4,10 @@ using UnityEngine.Serialization;
 namespace NodeGraph
 {
     
-    [NodeInfo("Perform","Process/Perform", true, true)]
+    [NodeInfo("Rotate","Process/Rotate", true, true)]
     public class RotateNode : BaseGraphNode
     {
+        [SceneObjectPicker]
         [ExposedProperty][DisplayName("Target")]
         public string target; 
         
