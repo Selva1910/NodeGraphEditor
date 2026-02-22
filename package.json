@@ -6,8 +6,8 @@
   "unity": "2022.3",
   "unityRelease": "21f1",
   "documentationUrl": "",
-  "changelogUrl": "",
-  "licensesUrl": "",
+  "changelogUrl": "https://github.com/Selva1910/NodeGraphEditor/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/Selva1910/NodeGraphEditor/blob/main/LICENSE",
   "dependencies": {},
   "keywords": [
     "grapheditor",
