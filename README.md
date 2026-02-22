@@ -3,7 +3,7 @@
 > A visual node graph editor for Unity, built from scratch using the **GraphView** API — designed to power event-driven, flow-based gameplay logic through a ScriptableObject architecture.
 
 [![Unity Version](https://img.shields.io/badge/Unity-2022.3%2B-blue?logo=unity)](https://unity.com)
-[![Version](https://img.shields.io/badge/Package-v1.0.2-green)](https://github.com/Selva1910/NodeGraphEditor)
+[![Version](https://img.shields.io/badge/Package-v1.0.5-green)](https://github.com/Selva1910/NodeGraphEditor)
 [![License](https://img.shields.io/badge/License-AGPL%20v3-red)](LICENSE)
 
 ---
