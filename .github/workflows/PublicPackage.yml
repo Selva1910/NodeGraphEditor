@@ -2,79 +2,56 @@ name: Publish UPM Package
 
 on:
   push:
-    tags:
-      - "v*.*.*"
+    branches:
+      - main
+    paths:
+      - 'package.json' # Only runs when this file is changed
 
 jobs:
-  update-and-release:
+  release-on-version-change:
     runs-on: ubuntu-latest
     permissions:
-      contents: write 
+      contents: write
 
     steps:
       - name: Check out code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 
 
-      - name: Prepare and Update Version
-        id: prep
+      - name: Extract Version from package.json
+        id: get_version
         run: |
-          # Strip 'v' for Unity (v1.0.6 -> 1.0.6)
-          RAW_TAG=${{ github.ref_name }}
-          CLEAN_TAG=$(echo $RAW_TAG | sed 's/^v//')
-          echo "tag=$CLEAN_TAG" >> $GITHUB_OUTPUT
-
-          if [ -f package.json ]; then
-            # Update the version string in package.json
-            sed -i "s/\"version\": \".*\"/\"version\": \"$CLEAN_TAG\"/" package.json
-          else
-            echo "package.json not found!" && exit 1
-          fi
+          # Pulls the version string from package.json
+          VERSION=$(grep '"version":' package.json | cut -d'"' -f4)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected Version: $VERSION"
         shell: bash
 
-      - name: Commit and Push to Main
+      - name: Create UPM Package (tarball)
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # 1. Fetch the latest and move to main
-          git fetch origin main
-          git checkout main
-          
-          # 2. Update the file (it was modified on the detached HEAD, so we move it here)
-          git checkout ${{ github.sha }} package.json
-          
-          # 3. Commit and Push
-          git add package.json
-          git commit -m "chore: bump version to ${{ steps.prep.outputs.tag }}" || echo "No changes to commit"
-          
-          # 4. Use --force-with-lease to safely overwrite the remote version bump
-          git push origin main
-        shell: bash
-
-      - name: Create .tgz Artifact
-        run: |
-          PACKAGE_NAME="com.cjhawk.graphnodeeditor-${{ steps.prep.outputs.tag }}.tgz"
-          # The fix: Exclude any .tgz files so tar doesn't try to include its own output
-          tar -czf "$PACKAGE_NAME" --exclude='.git*' --exclude='*.tgz' .
+          # Use npm pack to create a clean Unity-compatible tarball
+          # Alternatively, use tar if you aren't using a full npm environment
+          PACKAGE_NAME="com.cjhawk.graphnodeeditor-${{ steps.get_version.outputs.VERSION }}.tgz"
+          tar -czf "$PACKAGE_NAME" --exclude='.git*' --exclude='.github*' --exclude='*.tgz' .
           echo "PACKAGE_PATH=$PACKAGE_NAME" >> $GITHUB_ENV
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: "Release ${{ github.ref_name }}"
+          # Uses the version from package.json as the tag name (e.g., 1.0.8)
+          tag_name: v${{ steps.get_version.outputs.VERSION }}
+          name: "Release ${{ steps.get_version.outputs.VERSION }}"
           body: |
-            ## Node Graph Editor ${{ steps.prep.outputs.tag }}
+            ## Node Graph Editor ${{ steps.get_version.outputs.VERSION }}
             
-            The `package.json` version has been synced to `${{ steps.prep.outputs.tag }}`.
+            This release was automatically generated based on updates to `package.json`.
             
             ### Installation
-            - **Git URL:** `https://github.com/Selva1910/NodeGraphEditor.git#${{ github.ref_name }}`
-            - **Tarball:** Use "Add package from tarball" in Unity and select the `.tgz` below.
+            - **Git URL:** `https://github.com/Selva1910/NodeGraphEditor.git#v${{ steps.get_version.outputs.VERSION }}`
+            - **Tarball:** Download the `.tgz` below and use "Add package from tarball" in Unity.
             
             ---
             *Author: Selvaraj Balakrishnan*
             *License: AGPLv3 (Attribution Required)*
           files: ${{ env.PACKAGE_PATH }}
+          draft: false
+          prerelease: false
