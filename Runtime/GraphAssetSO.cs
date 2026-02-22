@@ -28,6 +28,21 @@ namespace NodeGraph
             m_connections = new List<GraphConnection>();
         }
 
+        public BaseEventNode[] GetAllGraphEventNodes()
+        {
+            if (Nodes == null || Nodes.Count == 0)
+            {
+                Debug.LogError("No nodes available!");
+                return null;
+            }
+            BaseEventNode[] eventNodes = Nodes.OfType<BaseEventNode>().ToArray();
+            if (eventNodes.Length == 0)
+            {
+                Debug.LogError("No Event Nodes available!");
+                return null;
+            }
+            return eventNodes;
+        }
         public BaseGraphNode GetStartNode()
         {
             if (Nodes == null || Nodes.Count == 0)
@@ -65,6 +80,31 @@ namespace NodeGraph
             return null;
         }
 
+        public BaseGraphNode GetNodeFromInput(string inputNodeId, int index)
+        {
+            if (Connections == null || Connections.Count == 0)
+            {
+                Debug.LogError("No connections available!");
+                return null;
+            }
+
+            foreach (GraphConnection connection in Connections)
+            {
+                if (connection.inputPort.nodeId == inputNodeId && connection.outputPort.portIndex == index)
+                {
+                    if (m_NodeDictionary.TryGetValue(connection.outputPort.nodeId, out BaseGraphNode outputNode))
+                    {
+                        return outputNode;
+                    }
+                    else
+                    {
+                        Debug.LogError("Node ID not found in dictionary!");
+                    }
+                    
+                }
+            }
+            return null;
+        }
         public BaseGraphNode GetNodeFromOutput(string outputNodeId, int index)
         {
             if (Connections == null || Connections.Count == 0)
@@ -89,6 +129,29 @@ namespace NodeGraph
             }
             return null;
         }
+        public BaseGraphNode GetNodeFromOutput(string outputNodeId)
+        {
+            if (Connections == null || Connections.Count == 0)
+            {
+                Debug.LogError("No connections available!");
+                return null;
+            }
 
+            foreach (GraphConnection connection in Connections)
+            {
+                if (connection.outputPort.nodeId == outputNodeId)
+                {
+                    if (m_NodeDictionary.TryGetValue(connection.inputPort.nodeId, out BaseGraphNode inputNode))
+                    {
+                        return inputNode;
+                    }
+                    else
+                    {
+                        Debug.LogError("Node ID not found in dictionary!");
+                    }
+                }
+            }
+            return null;
+        }
     }
 }
