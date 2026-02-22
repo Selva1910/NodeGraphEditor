@@ -1,7 +1,7 @@
 {
   "name": "com.cjhawk.graphnodeeditor",
   "version": "1.0.8",
-  "displayName": "Node Graph Editor ",
+  "displayName": "Node Graph Editor",
   "description": "A visual node graph editor for Unity, built from scratch using the GraphView API — designed to power event-driven, flow-based gameplay logic through a ScriptableObject architecture.",
   "unity": "2022.3",
   "unityRelease": "21f1",

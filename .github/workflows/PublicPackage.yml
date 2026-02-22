@@ -28,11 +28,21 @@ jobs:
 
       - name: Create UPM Package (tarball)
         run: |
-          # Use npm pack to create a clean Unity-compatible tarball
-          # Alternatively, use tar if you aren't using a full npm environment
-          PACKAGE_NAME="com.cjhawk.graphnodeeditor-${{ steps.get_version.outputs.VERSION }}.tgz"
-          tar -czf "$PACKAGE_NAME" --exclude='.git*' --exclude='.github*' --exclude='*.tgz' .
+          # 1. Define names
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          PACKAGE_NAME="com.cjhawk.graphnodeeditor-${VERSION}.tgz"
+          
+          # 2. Run tar, but output to /tmp to avoid the "file changed" error
+          tar -czf "/tmp/$PACKAGE_NAME" \
+            --exclude='.git*' \
+            --exclude='.github*' \
+            --exclude='*.tgz' \
+            .
+          
+          # 3. Move it back to the workspace for the release step
+          mv "/tmp/$PACKAGE_NAME" .
           echo "PACKAGE_PATH=$PACKAGE_NAME" >> $GITHUB_ENV
+        shell: bash
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
