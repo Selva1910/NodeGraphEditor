@@ -38,14 +38,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # This is the critical fix:
-          # Ensure local 'main' exists and tracks the remote 'main'
-          git checkout main || git checkout -b main origin/main
-
-          git add package.json
-          # If you've updated your NOTICE or LICENSE, they get picked up here too
-          git commit -m "chore: bump version to ${{ steps.prep.outputs.tag }}"
+          # 1. Fetch the latest and move to main
+          git fetch origin main
+          git checkout main
           
+          # 2. Update the file (it was modified on the detached HEAD, so we move it here)
+          git checkout ${{ github.sha }} package.json
+          
+          # 3. Commit and Push
+          git add package.json
+          git commit -m "chore: bump version to ${{ steps.prep.outputs.tag }}" || echo "No changes to commit"
+          
+          # 4. Use --force-with-lease to safely overwrite the remote version bump
           git push origin main
         shell: bash
 
